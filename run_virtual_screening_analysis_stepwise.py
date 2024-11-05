@@ -16,7 +16,7 @@ if module_path not in sys.path:
 import pandas as pd
 import numpy as np
 
-from compound_filtering import preprocess_dockingScore, add_property, filter_by_property
+from compound_filtering import preprocess_dockingScore, add_property, filter_by_property, filter_by_dockingScore
 from compound_selection import get_clusterLabel, select_cmpds_from_clusters, add_centroid_figure_column
 
 
@@ -40,6 +40,10 @@ if __name__=='__main__':
     # property_filters = {'MW': lambda x: x <= 650, 'logP': lambda x: x <= 4.5}
     # filter_by_property(input_file, property_filters)
 
+    # input_file = 'tests/test_filter_by_dockingScore_998.csv'
+    # dockingScore_cutoff = {'Docking_Score_Pocket1': -5.0, 'Docking_Score_Pocket3': -8.0}
+    # filter_by_dockingScore(input_file, dockingScore_cutoff)
+
     ### Get cluster labels ###
     # input_file_SMILES = 'tests/test_SMILES_file.csv'
     # input_file_clusterLabel = 'tests/test_clusterLabel_file.csv'
@@ -48,7 +52,6 @@ if __name__=='__main__':
     #                  clusterLabel_column_name_clusterLabelFile='MCS Cluster 0.7')
 
     ### Select representatives ###
-    # print(pd.options.mode.copy_on_write)
     input_file = 'tests/test_select_representatives.csv'
     clusterLabel_column_name = 'MCS_Cluster'
     # Select the best compounds #

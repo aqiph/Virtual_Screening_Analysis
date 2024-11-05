@@ -16,11 +16,11 @@ from utils.tools import remove_unnamed_columns
 ### Preprocess docking score file ###
 def preprocess_dockingScore(input_file_dockingScore, dockingScore_cutoff=0.0, **kwargs):
     """
-    Preprocess docking score file
-    :param input_file_dockingScore: str, path of the input docking score file
-    :param dockingScore_cutoff: float, docking score cutoff
-    :param id_column_name: str, name of the ID column
-    :param dockingScore_column_name: str, name of the docking score column
+    Preprocess docking score file.
+    :param input_file_dockingScore: str, path of the input docking score file.
+    :param dockingScore_cutoff: float, docking score cutoff.
+    :param id_column_name: str, name of the ID column.
+    :param dockingScore_column_name: str, name of the docking score column.
     :return: None
     """
     # files
@@ -55,13 +55,13 @@ def preprocess_dockingScore(input_file_dockingScore, dockingScore_cutoff=0.0, **
 ### Combine SMILES input file and property input file ###
 def add_property(input_file_SMILES, input_file_property, new_property_column_names, property_filters=None, **kwargs):
     """
-    Filter compounds based on property cutoff
-    :param input_file_SMILES: str, path of the input SMILES file
-    :param input_file_property: str, path of the input property file
-    :param new_property_column_names: list of strs, names of the property columns to be added in input_file_property
-    :param property_filters: dict or None, dict of functions for property filters
-    :param id_column_name_SMILESFile: str, name of the ID column in input_file_SMILES
-    :param id_column_name_propertyFile: str, name of the ID column in input_file_property
+    Filter compounds based on property cutoff.
+    :param input_file_SMILES: str, path of the input SMILES file.
+    :param input_file_property: str, path of the input property file.
+    :param new_property_column_names: list of strs, names of the property columns to be added in input_file_property.
+    :param property_filters: dict or None, dict of functions for property filters.
+    :param id_column_name_SMILESFile: str, name of the ID column in input_file_SMILES.
+    :param id_column_name_propertyFile: str, name of the ID column in input_file_property.
     :return: None
     """
     # files
@@ -106,9 +106,9 @@ def add_property(input_file_SMILES, input_file_property, new_property_column_nam
 ### Apply property filters ###
 def filter_by_property(input_file, property_filters=None):
     """
-    Filter compounds based on property cutoff
-    :param input_file: str, path of the input file
-    :param property_filters: dict or None, dict of functions for property filters
+    Filter compounds based on property cutoff.
+    :param input_file: str, path of the input file.
+    :param property_filters: dict or None, dict of functions for property filters, i.e., {column: function}.
     :return: None
     """
     # files
@@ -135,6 +135,49 @@ def filter_by_property(input_file, property_filters=None):
     print('Applying filters is done.')
 
 
+def filter_by_dockingScore(input_file, dockingScore_cutoffs=None):
+    """
+    Filter compounds based on docking score cutoff.
+    :param input_file: str, path of the input file.
+    :param dockingScore_cutoffs: dict or None, dict of docking score cutoffs for docking filters, i.e., {column: cutoff}.
+    :return: None
+    """
+    # files
+    output_file = os.path.splitext(os.path.abspath(input_file))[0] + '_Filtered'
+    df = pd.read_csv(input_file)
+    print('Number of rows in the original file:', df.shape[0])
+
+    # filters
+    if dockingScore_cutoffs is not None:
+        df = df[df.apply(lambda row:select_by_dockingScore(row, dockingScore_cutoffs), axis=1)]
+
+    # write output file
+    df = df.reset_index(drop=True)
+    print('Number of rows in the filtered file:', df.shape[0])
+    df = remove_unnamed_columns(df)
+    df.to_csv(f'{output_file}_{df.shape[0]}.csv')
+    print('Applying docking score filters is done.')
+
+
+def select_by_dockingScore(row, dockingScore_cutoffs):
+    """
+    Helper function for filter_by_dockingScore, return True if any docking score satisfies the requirement, return False otherwise.
+    :param row: row of pd.DataFrame object.
+    :param dockingScore_cutoffs: dict or None, dict of docking score cutoffs for docking filters, i.e., {column: cutoff}.
+    :return: bool
+    """
+    if dockingScore_cutoffs is None:
+        return True
+
+    for column, cutoff in dockingScore_cutoffs.items():
+        try:
+            if row[column] <= cutoff:
+                return True
+        except Exception:
+            print(f'Error:Docking score filter in the {column} column is not applied.')
+    return False
+
+
 
 if __name__ == '__main__':
 
@@ -144,14 +187,18 @@ if __name__ == '__main__':
     # preprocess_dockingScore(input_file_dockingScore, dockingScore_cutoff, id_column_name='ID', dockingScore_column_name ='r_i_docking_score')
 
     ### Combine SMILES input file and property input file ###
-    input_file_SMILES = 'tests/test_SMILES_file.csv'
-    input_file_property = 'tests/test_property_file.csv'
-    new_property_column_names = ['MW', 'logP', 'HBD']
-    property_filters = {'MW':lambda x: x <= 650, 'logP':lambda x: x <= 5.0}
-    add_property(input_file_SMILES, input_file_property, new_property_column_names, property_filters,
-                 id_column_name_SMILESFile = 'ID', id_column_name_propertyFile = 'ID')
+    # input_file_SMILES = 'tests/test_SMILES_file.csv'
+    # input_file_property = 'tests/test_property_file.csv'
+    # new_property_column_names = ['MW', 'logP', 'HBD']
+    # property_filters = {'MW':lambda x: x <= 650, 'logP':lambda x: x <= 5.0}
+    # add_property(input_file_SMILES, input_file_property, new_property_column_names, property_filters,
+    #              id_column_name_SMILESFile = 'ID', id_column_name_propertyFile = 'ID')
 
     ### Apply property filters ###
-    input_file = 'tests/test_property_file_Property_295.csv'
-    property_filters = {'MW': lambda x: x <= 450, 'logP': lambda x: x <= 4.5}
-    filter_by_property(input_file, property_filters)
+    # input_file = 'tests/test_property_file_Property_295.csv'
+    # property_filters = {'MW': lambda x: x <= 450, 'logP': lambda x: x <= 4.5}
+    # filter_by_property(input_file, property_filters)
+
+    input_file = 'tests/test_filter_by_dockingScore_998.csv'
+    dockingScore_cutoff = {'Docking_Score_Pocket1': -5.0, 'Docking_Score_Pocket3': -8.0}
+    filter_by_dockingScore(input_file, dockingScore_cutoff)
