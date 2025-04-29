@@ -189,7 +189,7 @@ def get_best_compound(df_cluster, count, dockingScore_column_name, property_rule
     which meet the most criteria and have the highest docking score.
     :param df_cluster: pd.DataFrame object which contains compounds from each cluster.
     :param count: int, request count for each cluster.
-    :param dockingScore_column_name: str, name of the docking score column.
+    :param dockingScore_column_name: str or None, name of the docking score column.
     :param property_rules: dict, dictionary of property rules, each key-value is defined as column_name:function.
     :param min_num_rules: int, minimum number of rules a compound need to satisfy.
     :return: pd.DataFrame object which contains selected representative compounds.
@@ -212,7 +212,10 @@ def get_best_compound(df_cluster, count, dockingScore_column_name, property_rule
     # get compounds that meet minimum number of criteria
     df_filtered = df_cluster[df_cluster['Property_Score'] >= min_num_rules]
     # sort compounds based on property score first then on docking score
-    df_filtered = df_filtered.sort_values(by=['Property_Score', dockingScore_column_name], ascending=[False, True], ignore_index=True)
+    if dockingScore_column_name is not None:
+        df_filtered = df_filtered.sort_values(by=['Property_Score', dockingScore_column_name], ascending=[False, True], ignore_index=True)
+    else:
+        df_filtered = df_filtered.sort_values(by=['Property_Score'], ascending=[False], ignore_index=True)
     # get representative compounds based on count
     n = min(count, df_filtered.shape[0])
     df_subset = df_filtered.loc[0:(n-1)]
