@@ -7,6 +7,7 @@ Created on Thu May 08 14:32:00 2025
 
 """
 
+import subprocess, json
 import pandas as pd
 import numpy as np
 from rdkit import Chem
@@ -87,6 +88,34 @@ def plot_dockingScore_vs_MW(input_file, smiles_column_name='Cleaned_SMILES', doc
     plt.title('Docking Score vs. Molecular Weight', fontsize=16, fontweight='bold')
     plt.tight_layout()
     plt.savefig(f'Docking Score vs Molecular Weight.pdf', format='pdf')
+
+
+### Preprocess boltz2 binding affinity files ###
+def get_boltzScore(id, input_dir_boltzScore):
+    """
+    Helper function for preprocessing boltz score file.
+    """
+    file = f'{input_dir_boltzScore}/predictions/{id}/affinity_{id}.json'
+
+    try:
+        with open(file) as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return 0.0, 0.0
+    boltzScore = data.get('affinity_pred_value')
+    boltzProb = data.get('affinity_probability_binary')
+    return boltzScore, boltzProb
+
+
+def run(cmd):
+    """
+    Run a shell command and raise it if fails.
+    """
+    completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    if completed.returncode != 0:
+        print(completed.stdout)
+        raise RuntimeError(f"Command failed: {' '.join(cmd)}")
+    return completed.stdout
 
 
 if __name__ == '__main__':

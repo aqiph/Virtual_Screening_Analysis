@@ -213,7 +213,7 @@ def get_best_compound(df_cluster, count, dockingScore_column_name, property_rule
     df_filtered = df_cluster[df_cluster['Property_Score'] >= min_num_rules]
     # sort compounds based on property score first then on docking score
     if dockingScore_column_name is not None:
-        df_filtered = df_filtered.sort_values(by=['Property_Score', dockingScore_column_name], ascending=[False, True], ignore_index=True)
+        df_filtered = df_filtered.sort_values(by=['Property_Score', dockingScore_column_name], ascending=[False, False], ignore_index=True)
     else:
         df_filtered = df_filtered.sort_values(by=['Property_Score'], ascending=[False], ignore_index=True)
     # get representative compounds based on count

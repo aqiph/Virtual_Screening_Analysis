@@ -6,10 +6,13 @@ Created on Thu May 30 11:15:00 2024
 @author: guohan
 """
 
-import os, sys
+import os
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
+import gemmi
 
+from utils.util import get_boltzScore, run
 from utils.tools import remove_unnamed_columns
 
 
@@ -50,6 +53,64 @@ def preprocess_dockingScore(input_file_dockingScore, dockingScore_cutoff=0.0, **
     df_dockingScore_filtered = remove_unnamed_columns(df_dockingScore_filtered)
     df_dockingScore_filtered.to_csv(f'{output_file}_{df_dockingScore_filtered.shape[0]}.csv')
     print('Preprocessing docking score file is done.')
+
+
+### Preprocess boltz2 binding affinity files ###
+def preprocess_boltzScore(input_file_SMILES, input_dir_boltzScore, **kwargs):
+    """
+    Preprocess boltz score file.
+    """
+    # files
+    output_file = os.path.splitext(os.path.abspath(input_file_SMILES))[0] + '_BoltzScore'
+
+    # kwargs
+    id_column_name = kwargs.get('id_column_name', 'ID')
+    boltzScore_column_name = kwargs.get('boltzScore_column_name', 'Boltz')
+    boltzProb_column_name = 'Probability_' + boltzScore_column_name
+    output_type = kwargs.get('output_type', 'IC50')
+
+    # extract Boltz2 binding affinity
+    df = pd.read_csv(input_file_SMILES)
+    df[boltzScore_column_name] = df[id_column_name].apply(lambda id: get_boltzScore(id, input_dir_boltzScore))
+    df[[boltzScore_column_name, boltzProb_column_name]] = pd.DataFrame(df[boltzScore_column_name].values.tolist())
+
+    # change binding affinity type
+    if output_type == 'IC50':   # units: uM
+        df[boltzScore_column_name] = np.power(10, df[boltzScore_column_name])
+        boltzAffinity_column_name = 'IC50_' + boltzScore_column_name + ' (uM)'
+    elif output_type.lower() == 'binding_affinity':
+        df[boltzScore_column_name] = -(6.0 - df[boltzScore_column_name]) * 1.364
+        boltzAffinity_column_name = 'Binding_Affinity_' + boltzScore_column_name + ' (kcal/mol)'
+    else:
+        raise ValueError('output_type')
+    df.rename(columns={boltzScore_column_name:boltzAffinity_column_name}, inplace=True)
+    df[boltzAffinity_column_name] = df[boltzAffinity_column_name].apply(lambda score: np.round(score, decimals=3))
+    df[boltzProb_column_name] = df[boltzProb_column_name].apply(lambda score: np.round(score, decimals=3))
+
+    # extract and combine binding modes
+    IDs = df[id_column_name].tolist()
+    mae_files = []
+    for idx in tqdm(IDs, desc="Converting CIF to MAE"):
+        cif_file = f'{input_dir_boltzScore}/predictions/{idx}/{idx}_model_0.cif'
+        mae_file = f'{input_dir_boltzScore}/predictions/{idx}/{idx}_model_0.mae'
+        doc = gemmi.cif.read(cif_file)
+        block = doc.sole_block()
+        block.name = idx
+        block.set_pair('_entry.id', idx)
+        doc.write_file(cif_file)
+        cmd = ['bash', '/opt/schrodinger/suites2023-4/utilities/structconvert', cif_file, mae_file]
+        run(cmd)
+        mae_files.append(mae_file)
+
+    cat_cmd = ['bash', '/opt/schrodinger/suites2023-4/utilities/structcat', '-o', output_file+'.mae']
+    cat_cmd += mae_files
+    run(cat_cmd)
+
+    # write output file
+    df = remove_unnamed_columns(df)
+    df.to_csv(f'{output_file}_{df.shape[0]}.csv')
+    print('Preprocessing Boltz score file is done.')
+
 
 
 ### Combine SMILES input file and property input file ###
@@ -186,6 +247,12 @@ if __name__ == '__main__':
     # dockingScore_cutoff = 0.0
     # preprocess_dockingScore(input_file_dockingScore, dockingScore_cutoff, id_column_name='ID', dockingScore_column_name ='r_i_docking_score')
 
+    ### Preprocess boltz2 binding affinity files ###
+    input_file_SMILES = 'tests/test_boltz.csv'
+    input_dir_boltzScore = 'tests/test_boltz_results'
+    preprocess_boltzScore(input_file_SMILES, input_dir_boltzScore, id_column_name='ID', boltzScore_column_name='Boltz',
+                          output_type = 'IC50')
+
     ### Combine SMILES input file and property input file ###
     # input_file_SMILES = 'tests/test_SMILES_file.csv'
     # input_file_property = 'tests/test_property_file.csv'
@@ -199,6 +266,6 @@ if __name__ == '__main__':
     # property_filters = {'MW': lambda x: x <= 450, 'logP': lambda x: x <= 4.5}
     # filter_by_property(input_file, property_filters)
 
-    input_file = 'tests/test_filter_by_dockingScore_998.csv'
-    dockingScore_cutoff = {'Docking_Score_Pocket1': -5.0, 'Docking_Score_Pocket3': -8.0}
-    filter_by_dockingScore(input_file, dockingScore_cutoff)
+    # input_file = 'tests/test_filter_by_dockingScore_998.csv'
+    # dockingScore_cutoff = {'Docking_Score_Pocket1': -5.0, 'Docking_Score_Pocket3': -8.0}
+    # filter_by_dockingScore(input_file, dockingScore_cutoff)

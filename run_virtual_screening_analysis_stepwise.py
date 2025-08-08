@@ -16,7 +16,7 @@ if module_path not in sys.path:
 import pandas as pd
 import numpy as np
 
-from compound_filtering import preprocess_dockingScore, add_property, filter_by_property, filter_by_dockingScore
+from compound_filtering import preprocess_dockingScore, add_property, filter_by_property, filter_by_dockingScore, preprocess_boltzScore
 from compound_selection import get_clusterLabel, select_cmpds_from_clusters, add_centroid_figure_column
 
 
@@ -26,6 +26,12 @@ if __name__=='__main__':
     # input_file_dockingScore = 'tests/test_preprocess_dockingScore.csv'
     # dockingScore_cutoff = 0.0
     # preprocess_dockingScore(input_file_dockingScore, dockingScore_cutoff, id_column_name='ID', dockingScore_column_name ='r_i_docking_score')
+
+    ### Preprocess boltz2 binding affinity files ###
+    input_file_SMILES = 'tests/test_boltz.csv'
+    input_dir_boltzScore = 'tests/test_boltz_results'
+    preprocess_boltzScore(input_file_SMILES, input_dir_boltzScore, id_column_name='ID',
+                          boltzScore_column_name='idx0_DNA', output_type='IC50')
 
     ### Combine SMILES input file and property input file ###
     # input_file_SMILES = 'tests/test_SMILES_file.csv'
@@ -55,11 +61,11 @@ if __name__=='__main__':
     input_file = 'tests/test_select_representatives.csv'
     clusterLabel_column_name = 'MCS_Cluster'
     # Select the best compounds #
-    property_rules = {'MW': lambda mw: mw <= 500, 'logP': lambda logp: logp > 0.0, 'HBD': lambda hbd: hbd <= 3}
-    select_cmpds_from_clusters(input_file, clusterLabel_column_name, selection_method='best',
-                               outlier_label=0, keep_outlier=True, count_per_cluster=2,
-                               SMILES_column_name='Cleaned_SMILES', dockingScore_column_name='Docking_Score',
-                               property_rules=property_rules, min_num_rules=2, addCentroid=True)
+    # property_rules = {'MW': lambda mw: mw <= 500, 'logP': lambda logp: logp > 0.0, 'HBD': lambda hbd: hbd <= 3}
+    # select_cmpds_from_clusters(input_file, clusterLabel_column_name, selection_method='best',
+    #                            outlier_label=0, keep_outlier=True, count_per_cluster=2,
+    #                            SMILES_column_name='Cleaned_SMILES', dockingScore_column_name='Docking_Score',
+    #                            property_rules=property_rules, min_num_rules=2, addCentroid=True)
     # Select the smallest compound #
     # select_cmpds_from_clusters(input_file, clusterLabel_column_name, selection_method='smallest',
     #                            outlier_label=0, keep_outlier=True, count_per_cluster=1,
