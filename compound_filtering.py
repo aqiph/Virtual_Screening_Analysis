@@ -12,7 +12,7 @@ import numpy as np
 from tqdm import tqdm
 import gemmi
 
-from utils.util import get_boltzScore, run
+from utils.util import get_boltzResult, cal_boltzScore, run, plot_BoltzResult
 from utils.tools import remove_unnamed_columns
 
 
@@ -56,43 +56,63 @@ def preprocess_dockingScore(input_file_dockingScore, dockingScore_cutoff=0.0, **
 
 
 ### Preprocess boltz2 binding affinity files ###
-def preprocess_boltzScore(input_file_SMILES, input_dir_boltzScore, **kwargs):
+def preprocess_boltzResult(input_file_SMILES, input_dir_boltzResult, **kwargs):
     """
-    Preprocess boltz score file.
+    Preprocess Boltz results.
+    :param input_file_SMILES: str, path of the input SMILES file.
+    :param input_dir_boltzResult: str, path of the input Boltz result file.
+    :param id_column_name: str, name of the ID column.
+    :param boltzResult_column_name: str, name of the Boltz result column.
+    :param output_type: str, output type for binding affinity, allowed values include: 'IC50', 'binding_free_energy'.
+    :param calculate_boltz_score: bool, whether calculate Boltz score or not.
+    :param process_binding_pose: bool, whether process binding pose or not.
     """
     # files
-    output_file = os.path.splitext(os.path.abspath(input_file_SMILES))[0] + '_BoltzScore'
+    output_file = os.path.splitext(os.path.abspath(input_file_SMILES))[0] + '_BoltzResult'
 
     # kwargs
     id_column_name = kwargs.get('id_column_name', 'ID')
-    boltzScore_column_name = kwargs.get('boltzScore_column_name', 'Boltz')
-    boltzProb_column_name = 'Probability_' + boltzScore_column_name
-    output_type = kwargs.get('output_type', 'IC50')
+    boltzResult_column_name = kwargs.get('boltzResult_column_name', 'Boltz')
+    boltzProb_column_name = 'Probability_' + boltzResult_column_name
+    output_type = kwargs.get('output_type', 'IC50')   # 'IC50' or 'binding_free_energy'
+    boltzScore = kwargs.get('calculate_boltz_score', False)
+    process_pose = kwargs.get('process_binding_pose', False)
 
     # extract Boltz2 binding affinity
     df = pd.read_csv(input_file_SMILES)
-    df[boltzScore_column_name] = df[id_column_name].apply(lambda id: get_boltzScore(id, input_dir_boltzScore))
-    df[[boltzScore_column_name, boltzProb_column_name]] = pd.DataFrame(df[boltzScore_column_name].values.tolist())
+    df[boltzResult_column_name] = df[id_column_name].apply(lambda id: get_boltzResult(id, input_dir_boltzResult))
+    df[[boltzResult_column_name, boltzProb_column_name]] = pd.DataFrame(df[boltzResult_column_name].values.tolist())
+
+    # compute Boltz score
+    if boltzScore:
+        boltzScore_column_name = 'BoltzScore_' + boltzResult_column_name
+        df[boltzScore_column_name] = df.apply(lambda row: cal_boltzScore(row[boltzResult_column_name], row[boltzProb_column_name]), axis=1)
 
     # change binding affinity type
     if output_type == 'IC50':   # units: uM
-        df[boltzScore_column_name] = np.power(10, df[boltzScore_column_name])
-        boltzAffinity_column_name = 'IC50_' + boltzScore_column_name + ' (uM)'
-    elif output_type.lower() == 'binding_affinity':
-        df[boltzScore_column_name] = -(6.0 - df[boltzScore_column_name]) * 1.364
-        boltzAffinity_column_name = 'Binding_Affinity_' + boltzScore_column_name + ' (kcal/mol)'
+        df[boltzResult_column_name] = np.power(10, df[boltzResult_column_name])
+        boltzAffinity_column_name = 'IC50_' + boltzResult_column_name + ' (uM)'
+    elif output_type.lower() == 'binding_free_energy':
+        df[boltzResult_column_name] = -(6.0 - df[boltzResult_column_name]) * 1.364
+        boltzAffinity_column_name = 'Binding_Free_Energy' + boltzResult_column_name + ' (kcal/mol)'
     else:
         raise ValueError('output_type')
-    df.rename(columns={boltzScore_column_name:boltzAffinity_column_name}, inplace=True)
+    df.rename(columns={boltzResult_column_name:boltzAffinity_column_name}, inplace=True)
     df[boltzAffinity_column_name] = df[boltzAffinity_column_name].apply(lambda score: np.round(score, decimals=3))
     df[boltzProb_column_name] = df[boltzProb_column_name].apply(lambda score: np.round(score, decimals=3))
 
+    # write output file
+    df = remove_unnamed_columns(df)
+    df.to_csv(f'{output_file}_{df.shape[0]}.csv')
+
     # extract and combine binding modes
+    if not process_pose:
+        return
     IDs = df[id_column_name].tolist()
     mae_files = []
     for idx in tqdm(IDs, desc="Converting CIF to MAE"):
-        cif_file = f'{input_dir_boltzScore}/predictions/{idx}/{idx}_model_0.cif'
-        mae_file = f'{input_dir_boltzScore}/predictions/{idx}/{idx}_model_0.mae'
+        cif_file = f'{input_dir_boltzResult}/predictions/{idx}/{idx}_model_0.cif'
+        mae_file = f'{input_dir_boltzResult}/predictions/{idx}/{idx}_model_0.mae'
         doc = gemmi.cif.read(cif_file)
         block = doc.sole_block()
         block.name = idx
@@ -105,12 +125,6 @@ def preprocess_boltzScore(input_file_SMILES, input_dir_boltzScore, **kwargs):
     cat_cmd = ['bash', '/opt/schrodinger/suites2023-4/utilities/structcat', '-o', output_file+'.mae']
     cat_cmd += mae_files
     run(cat_cmd)
-
-    # write output file
-    df = remove_unnamed_columns(df)
-    df.to_csv(f'{output_file}_{df.shape[0]}.csv')
-    print('Preprocessing Boltz score file is done.')
-
 
 
 ### Combine SMILES input file and property input file ###
@@ -249,9 +263,17 @@ if __name__ == '__main__':
 
     ### Preprocess boltz2 binding affinity files ###
     input_file_SMILES = 'tests/test_boltz.csv'
-    input_dir_boltzScore = 'tests/test_boltz_results'
-    preprocess_boltzScore(input_file_SMILES, input_dir_boltzScore, id_column_name='ID', boltzScore_column_name='Boltz',
-                          output_type = 'IC50')
+    input_dir_boltzResult = 'tests/test_boltz_results'
+    preprocess_boltzResult(input_file_SMILES, input_dir_boltzResult, id_column_name='ID', boltzResult_column_name='pfTopo I',
+                          output_type='IC50', calculate_boltz_score=True, process_binding_pose=False)
+
+    input_file = 'tests/test_boltz_BoltzResult_5.csv'
+    boltzProb_column_name = 'Probability_pfTopo I'
+    boltzIC50_column_name = 'IC50_pfTopo I (uM)'
+    boltzScore_column_name = 'BoltzScore_pfTopo I'
+    trueIC50_column_name = 'IC50(μM)_pfTopoI'
+    plot_BoltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
+                       trueIC50_column_name, cutoff=50, threshold=0.5, name='pfTopo I', remove_inactive=False)
 
     ### Combine SMILES input file and property input file ###
     # input_file_SMILES = 'tests/test_SMILES_file.csv'

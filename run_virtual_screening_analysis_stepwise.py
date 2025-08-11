@@ -16,8 +16,9 @@ if module_path not in sys.path:
 import pandas as pd
 import numpy as np
 
-from compound_filtering import preprocess_dockingScore, add_property, filter_by_property, filter_by_dockingScore, preprocess_boltzScore
+from compound_filtering import preprocess_dockingScore, add_property, filter_by_property, filter_by_dockingScore, preprocess_boltzResult
 from compound_selection import get_clusterLabel, select_cmpds_from_clusters, add_centroid_figure_column
+from utils.util import plot_BoltzResult
 
 
 if __name__=='__main__':
@@ -29,9 +30,17 @@ if __name__=='__main__':
 
     ### Preprocess boltz2 binding affinity files ###
     input_file_SMILES = 'tests/test_boltz.csv'
-    input_dir_boltzScore = 'tests/test_boltz_results'
-    preprocess_boltzScore(input_file_SMILES, input_dir_boltzScore, id_column_name='ID',
-                          boltzScore_column_name='idx0_DNA', output_type='IC50')
+    input_dir_boltzResult = 'tests/test_boltz_results'
+    preprocess_boltzResult(input_file_SMILES, input_dir_boltzResult, id_column_name='ID', boltzResult_column_name='pfTopo I',
+                          output_type='IC50', calculate_boltz_score=True, process_binding_pose=False)
+
+    input_file = 'tests/test_boltz_BoltzResult_5.csv'
+    boltzProb_column_name = 'Probability_pfTopo I'
+    boltzIC50_column_name = 'IC50_pfTopo I (uM)'
+    boltzScore_column_name = 'BoltzScore_pfTopo I'
+    trueIC50_column_name = 'IC50(μM)_pfTopoI'
+    plot_BoltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
+                     trueIC50_column_name, cutoff=50, threshold=0.5, name='pfTopo I', remove_inactive=False)
 
     ### Combine SMILES input file and property input file ###
     # input_file_SMILES = 'tests/test_SMILES_file.csv'
