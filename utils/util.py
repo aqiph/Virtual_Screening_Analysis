@@ -137,7 +137,7 @@ def run(cmd):
 
 
 ### Plot Boltz results
-def plot_BoltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
+def plot_boltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
                        trueIC50_column_name, cutoff, threshold, name, remove_inactive=False):
     """
     Plot experimental values versus Boltz-predicted results.

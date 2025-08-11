@@ -12,7 +12,7 @@ import numpy as np
 from tqdm import tqdm
 import gemmi
 
-from utils.util import get_boltzResult, cal_boltzScore, run, plot_BoltzResult
+from utils.util import get_boltzResult, cal_boltzScore, run, plot_boltzResult
 from utils.tools import remove_unnamed_columns
 
 
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     boltzIC50_column_name = 'IC50_pfTopo I (uM)'
     boltzScore_column_name = 'BoltzScore_pfTopo I'
     trueIC50_column_name = 'IC50(μM)_pfTopoI'
-    plot_BoltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
+    plot_boltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
                        trueIC50_column_name, cutoff=50, threshold=0.5, name='pfTopo I', remove_inactive=False)
 
     ### Combine SMILES input file and property input file ###

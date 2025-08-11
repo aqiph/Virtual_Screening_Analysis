@@ -18,7 +18,7 @@ import numpy as np
 
 from compound_filtering import preprocess_dockingScore, add_property, filter_by_property, filter_by_dockingScore, preprocess_boltzResult
 from compound_selection import get_clusterLabel, select_cmpds_from_clusters, add_centroid_figure_column
-from utils.util import plot_BoltzResult
+from utils.util import plot_boltzResult
 
 
 if __name__=='__main__':
@@ -39,7 +39,7 @@ if __name__=='__main__':
     boltzIC50_column_name = 'IC50_pfTopo I (uM)'
     boltzScore_column_name = 'BoltzScore_pfTopo I'
     trueIC50_column_name = 'IC50(μM)_pfTopoI'
-    plot_BoltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
+    plot_boltzResult(input_file, boltzProb_column_name, boltzIC50_column_name, boltzScore_column_name,
                      trueIC50_column_name, cutoff=50, threshold=0.5, name='pfTopo I', remove_inactive=False)
 
     ### Combine SMILES input file and property input file ###
